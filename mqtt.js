@@ -155,6 +155,7 @@ client.on('message', (topic, message) => {
 	topic = topic.toString();
 	message = message.toString();
 
+	console.log("#################")
 	console.log(`new message\ntopic: ${topic}\nmessage: ${message}`);
 
 	// expect device/action, like backyard/setOn, and nothing else
@@ -167,9 +168,13 @@ client.on('message', (topic, message) => {
 	if (Object.keys(codes).includes(device)) {
 		if (action === 'setOn') {
 			if (message === 'true') {
-				turnDeviceOn(device);
+				if (!device_is_on[device]) {
+					turnDeviceOn(device);
+				}
 			} else {
-				turnDeviceOff(device);
+				if (device_is_on[device]) {
+					turnDeviceOff(device);
+				}
 			}
 		} else if (action === 'setBrightness') {
 			changeBrightness(device, message);
