@@ -91,15 +91,19 @@ const turnDeviceOff = (device, brightness) => {
 const deviceBrightness = (device, brightness) => {
 	const target_brightness = Math.round(brightness / 100 * 7)
 	const brightness_dist = target_brightness - current_brightness[device]
+	console.log("Input brightness: " + brightness + "\nCurrent brightness: " + current_brightness[device] + "\nTarget brightness: " + target_brightness + "\nBrightness Distance: " + brightness_dist)
 	for (let itr = 0; itr < Math.abs(brightness_dist); itr++) {
 		if (brightness_dist < 0) {
 			sendCode('down', device);
+			console.log("Sent Down Command")
 			current_brightness[device] -= 1;
-			client.publish(`${device}/getBrightness`, Math.round(current_brightness[device] * 14.28).toString());
+			console.log("Updated Brightness: " + current_brightness[device])
+			client.publish(`${device}/getBrightness`, Math.round(current_brightness[device] * 100 / 7).toString());
+			console.log("publish: " + Math.round(current_brightness[device] * 100 / 7))
 		} else if (brightness_dist > 0) {
 			sendCode('up', device);
 			current_brightness[device] += 1;
-			client.publish(`${device}/getBrightness`, Math.round(current_brightness[device] * 14.28).toString());
+			client.publish(`${device}/getBrightness`, Math.round(current_brightness[device] * 100 / 7).toString());
 		}
 	}
 };
