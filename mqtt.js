@@ -95,11 +95,11 @@ const deviceBrightness = (device, brightness) => {
 		if (brightness_dist < 0) {
 			sendCode('down', device);
 			current_brightness[device] -= 1;
-			client.publish(`${device}/getBrightness`, current_brightness[device].toString());
+			client.publish(`${device}/getBrightness`, Math.round(current_brightness[device] * 14.28).toString());
 		} else if (brightness_dist > 0) {
 			sendCode('up', device);
 			current_brightness[device] += 1;
-			client.publish(`${device}/getBrightness`, current_brightness[device].toString());
+			client.publish(`${device}/getBrightness`, Math.round(current_brightness[device] * 14.28).toString());
 		}
 	}
 };
