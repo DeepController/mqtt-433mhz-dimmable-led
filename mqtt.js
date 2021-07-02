@@ -26,13 +26,13 @@ console.log(`args: ${argv}`);
 
 
 // number of times you want to repeat commands
-const commandRepeat = 2;
+const commandRepeat = 1;
 
 // queue of commands to run. we have to space out the commands or it'll try to execute commands over one another
 let commandQueue = [];
 
 // delay in ms between commands
-const commandDelay = 500;
+const commandDelay = 1000;
 
 // location of your codesend binary
 const codesend = (argv.codesend) ? argv.codesend : '/usr/src/app/433Utils/RPi_utils/codesend';
@@ -41,11 +41,11 @@ const codesend = (argv.codesend) ? argv.codesend : '/usr/src/app/433Utils/RPi_ut
 // current state and brightness
 // we're defaulting to off and 100% brightness
 console.log('initializing state');
-let current_state = {};
-let current_brightness = {};
+let device_is_on = {};
+let current_brightness = {}; // brightness varies between 0-7. 7 is the brightest.
 Object.keys(codes).forEach((device) => {
-	current_state[device] = false;
-	current_brightness[device] = 100;
+	device_is_on[device] = false;
+	current_brightness[device] = 7;
 });
 
 console.log('creating and starting process queue');
@@ -61,7 +61,7 @@ const processQueue = () => {
 setTimeout(processQueue, commandDelay);
 
 const sendCode = (command, device) => {
-	for(let i=0; i < commandRepeat; i++) {
+	for (let i = 0; i < commandRepeat; i++) {
 		let executable = codesend;
 		if ('script' in codes[device]) {
 			executable = codes[device]['script'];
@@ -74,39 +74,50 @@ const sendCode = (command, device) => {
 const turnDeviceOn = (device) => {
 	sendCode('on', device);
 	client.publish(`${device}/getOn`, 'true');
-	current_state[device] = true;
+	device_is_on[device] = true;
 };
 
 const turnDeviceOff = (device, brightness) => {
 	sendCode('off', device);
 	client.publish(`${device}/getOff`, 'false');
-	current_state[device] = false;
+	device_is_on[device] = false;
 	if (brightness) {
 		current_brightness[device] = 0;
 		client.publish(`${device}/getBrightness`, '0');
 	}
 };
+
 // for sending the code, mqtt publish, state
 const deviceBrightness = (device, brightness) => {
-	sendCode(brightness.toString(), device);
-	client.publish(`${device}/getBrightness`, brightness.toString());
-	current_brightness[device] = brightness;
+	const target_brightness = Math.round(brightness / 100 * 7)
+	const brightness_dist = target_brightness = target_brightness - current_brightness[device]
+	for (let itr = 0; itr < Math.abs(brightness_dist); itr++) {
+		if (brightness_dist < 0) {
+			sendCode('down', device);
+			current_brightness[device] -= 1;
+			client.publish(`${device}/getBrightness`, current_brightness[device].toString());
+		} else if (brightness_dist > 0) {
+			sendCode('up', device);
+			current_brightness[device] += 1;
+			client.publish(`${device}/getBrightness`, current_brightness[device].toString());
+		}
+	}
 };
 
 // for determining the rounded brightness and turning on/off the device
-const changeBrightness = (device, brightness) => {
-	let brightnessLevel = parseInt(brightness);
+const changeBrightness = (device, brightnessStr) => {
+	let brightnessLevel = parseInt(brightnessStr);
 
-	// we have to round the brightness to the nearest 25% since that's what the controller supports
+	// we have to round the brightness to the nearest 14% since that's what the controller supports
 	// there might be a better math way to do this
-	var roundedBrightness = Math.round(brightnessLevel / 100 * 4) / 4 * 100;
+	var roundedBrightness = Math.round(Math.round(brightnessLevel / 100 * 7) / 7 * 100);
 	// if we get a 0 brightness, set brightness to 0 and turn off the light
 	if (roundedBrightness === 0) {
 		turnDeviceOff(device, true);
 	} else {
 		// if the light is off, turn it on
 		var delay = 0;
-		if (!current_state[device]) {
+		if (!device_is_on[device]) {
 			turnDeviceOn(device);
 			delay = 1000;
 		}
@@ -148,7 +159,6 @@ client.on('message', (topic, message) => {
 	}
 
 	let [device, action] = topic.split('/');
-
 
 	if (Object.keys(codes).includes(device)) {
 		if (action === 'setOn') {
