@@ -42,9 +42,11 @@ const codesend = (argv.codesend) ? argv.codesend : '/usr/src/app/433Utils/RPi_ut
 // we're defaulting to off and 100% brightness
 console.log('initializing state');
 let device_is_on = {};
+let change_in_process = {};
 let current_brightness = {}; // brightness varies between 0-7. 7 is the brightest.
 Object.keys(codes).forEach((device) => {
 	device_is_on[device] = false;
+	change_in_process[device] = false
 	current_brightness[device] = 7;
 });
 
@@ -167,6 +169,10 @@ client.on('message', (topic, message) => {
 	let [device, action] = topic.split('/');
 
 	if (Object.keys(codes).includes(device)) {
+		if (change_in_process[device]) {
+			return;
+		}
+		change_in_process[device] = true
 		if (action === 'setOn') {
 			if (message === 'true') {
 				if (!device_is_on[device]) {
@@ -180,6 +186,7 @@ client.on('message', (topic, message) => {
 		} else if (action === 'setBrightness') {
 			changeBrightness(device, message);
 		}
+		change_in_process[device] = false
 	}
 });
 
