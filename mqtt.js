@@ -68,9 +68,9 @@ const sendCode = (command, device) => {
 		if ('script' in codes[device]) {
 			executable = codes[device]['script'];
 		}
-		// Set protocol to 0 and pulselength to 100
-		console.log(`appending: ${executable} ${codes[device][command]} 0 100`);
-		commandQueue.push(`${executable} ${codes[device][command]} 0 100`);
+		// Set protocol to 0 and pulselength to 200
+		console.log(`appending: ${executable} ${codes[device][command]} 0 200`);
+		commandQueue.push(`${executable} ${codes[device][command]} 0 200`);
 	}
 };
 
